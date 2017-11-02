@@ -130,7 +130,9 @@ function mergeSchemas(_a) {
                 fullResolvers.Subscription = {};
             }
             Object.keys(subscriptionType.getFields()).forEach(function (name) {
-                fullResolvers.Subscription[name] = createDelegatingResolver(mergeInfo, 'subscription', name);
+                fullResolvers.Subscription[name] = {
+                    subscribe: createDelegatingResolver(mergeInfo, 'subscription', name)
+                };
             });
             subscriptionFields = __assign({}, subscriptionFields, subscriptionType.getFields());
         }
@@ -226,7 +228,7 @@ function delegateToSchema(schema, fragmentReplacements, operation, fieldName, ar
                     else {
                         type = schema.getQueryType();
                     }
-                    if (!type) return [3 /*break*/, 2];
+                    if (!type) return [3 /*break*/, 3];
                     graphqlDoc = createDocument(schema, fragmentReplacements, type, fieldName, operation, info.fieldNodes, info.fragments, info.operation.variableDefinitions);
                     operationDefinition = graphqlDoc.definitions.find(function (_a) {
                         var kind = _a.kind;
@@ -247,11 +249,17 @@ function delegateToSchema(schema, fragmentReplacements, operation, fieldName, ar
                             variableValues_1[key] = value;
                         });
                     }
+                    if (!(operation === 'query' || operation === 'mutation')) return [3 /*break*/, 2];
                     return [4 /*yield*/, graphql_1.execute(schema, graphqlDoc, info.rootValue, context, variableValues_1)];
                 case 1:
                     result = _a.sent();
                     return [2 /*return*/, errors_1.checkResultAndHandleErrors(result, info, fieldName)];
-                case 2: throw new Error('Could not forward to merged schema');
+                case 2:
+                    if (operation === 'subscription') {
+                        return [2 /*return*/, graphql_1.subscribe(schema, graphqlDoc, info.rootValue, context, variableValues_1)];
+                    }
+                    _a.label = 3;
+                case 3: throw new Error('Could not forward to merged schema');
             }
         });
     });
